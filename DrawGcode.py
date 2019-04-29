@@ -4,6 +4,7 @@ import matplotlib.patches as mpatches
 import warnings
 import math
 import sys
+import re
 
 warnings.filterwarnings("ignore")  # remove deprecation warnings
 plt.rcParams['toolbar'] = 'None'  # remove stock matplotlib toolbar
@@ -11,22 +12,18 @@ plt.rcParams['toolbar'] = 'None'  # remove stock matplotlib toolbar
 
 # Author and information
 def print_startup_message():
-    print("DrawGcode v0.1b by Marcus Voß\nhttps://git.io/fhTYj\n")
+    print("DrawGcode v0.2b by Marcus Voß\nhttps://git.io/fhTYj\n")
     print("--------------------------------------------")
 
 
 # print a syntax error if something cant be interpreted
-def syntax_error():
-    print("Error: invalid syntax!\n\n");
+def print_error(type, reason=""):
+    print("The following error occured:", type, "(" + reason + ")")
 
 
 # return the right color based on the pen variable
 def linecolor(pen):
-    if pen:
-        c = "blue"
-    else:
-        c = "grey"
-    return c
+    return "blue" if pen else "grey"
 
 
 # return the target angle (in degrees) to a point on a circle seen from the center of the circle. dx,dy: relative coordinates of the point from the center. r: Radius of the circle.
@@ -51,13 +48,13 @@ def readKey(command, key):
             if not c.isdigit() and c not in {'.', '-'}:
                 break
             else:
-                value += c;
+                value += c
         if value == "":
-            syntax_error()
+            print_error("SYNTAX", "key value must not be empty")
             return -1
         return float(value)
     else:
-        print("ERROR: key:  "+key +" This should not happen?\n\n")
+        print_error("INTERNAL", key + " not in " + command)
         return -1
 
 
@@ -70,17 +67,21 @@ def file_reader(filename):
     try:
         file = open(filename, "r")
     except IOError:
-        print("ERROR: FAILED TO OPEN THE FILE\n\n")
+        print_error("FILE_NOT_FOUND", "unable to open " + filename)
         return -1
     for line in file:
+        print(repr(line))  # print line content including "\n"
+        #remove all comments
         if ";" in line:
             line = line.split(";")[0]
-        if not line :
+        if not line:
             continue
-        print(repr(line))  # print line content including "\n"
-        if line[0] not in ['G','M']:
-            print("WARNING: THE PREVIOUS LINE APPEARS TO BE WRONG OR CONTAINS UNSUPPORTED COMMANDS\n\n")
-        if "G28" in line:
+
+        elif "M400" in line:
+            if line.split("M400")[1] != "" and line.split("M400")[1] != "\n":
+                print("Warning: characters after M400 are ignored")
+
+        elif "G28" in line:
             plt.plot([x, 0], [y, 0], color=linecolor(pen))
             x = 0
             y = 0
@@ -88,11 +89,11 @@ def file_reader(filename):
             if "P0" in line and "S" in line:
                 s = readKey(line, "S")
                 if s >= 40:
-                    pen = True;
+                    pen = True
                 elif s == 0:
-                    pen = False;
+                    pen = False
                 else:
-                    syntax_error()
+                    print_error("SYTX")
         elif "G1" in line:
             tx = x
             ty = y
@@ -100,11 +101,13 @@ def file_reader(filename):
                 tx = readKey(line, "X")
             if "Y" in line:
                 ty = readKey(line, "Y")
-
             if x != None and y != None:
                 plt.plot([x, tx], [y, ty], color=linecolor(pen))
                 x = tx
                 y = ty
+            if "Z" in line:
+                print_error("NOT_SUPPORTED", "use M280 to controll the pen")
+
         elif "G2" in line or "G3" in line:
             tx = x
             ty = y
@@ -119,46 +122,60 @@ def file_reader(filename):
             if "J" in line:
                 j = readKey(line, "J")
             if "Z" in line:
-                z = readKey(line, "Z")
-                if z >= 40:
-                    pen = True;
-                elif z == 0:
-                    pen = False;
-                else:
-                    syntax_error()
+                print_error("NOT_SUPPORTED", "use M280 to controll the pen")
             centerX = x + i
             centerY = y + j
-            radius = math.sqrt((centerX - x) ** 2 + (centerY - y) ** 2) #distance between start point and center point
-            radius2 = math.sqrt((centerX - tx) ** 2 + (centerY - ty) ** 2) #distance beteen end point and center point
-            if radius != radius2: #to reach the end point from the starting point both radii have to be equal
-                syntax_error()
+            radius = math.sqrt(
+                (centerX - x)**2 + (centerY - y)**
+                2)  #distance between start point and center point
+            radius2 = math.sqrt(
+                (centerX - tx)**2 +
+                (centerY - ty)**2)  #distance beteen end point and center point
+            if radius != radius2:  #to reach the end point from the starting point both radii have to be equal
+                print_error("SYTX")
                 return -1
-            s1 = point_angle(x - centerX, y - centerY, radius) #angle from the center point  to the start point
-            s2 = point_angle(tx - centerX, ty - centerY, radius) #angle from the center point  to the end point
+            s1 = point_angle(
+                x - centerX, y - centerY,
+                radius)  #angle from the center point  to the start point
+            s2 = point_angle(
+                tx - centerX, ty - centerY,
+                radius)  #angle from the center point  to the end point
             if "G2" in line:
-                pac = mpatches.Arc([centerX, centerY], 2 * radius, 2 * radius, angle=0, theta1=s2, theta2=s1,
+                pac = mpatches.Arc([centerX, centerY],
+                                   2 * radius,
+                                   2 * radius,
+                                   angle=0,
+                                   theta1=s2,
+                                   theta2=s1,
                                    color=linecolor(pen))
             else:
-                pac = mpatches.Arc([centerX, centerY], 2 * radius, 2 * radius, angle=0, theta1=s1, theta2=s2,
+                pac = mpatches.Arc([centerX, centerY],
+                                   2 * radius,
+                                   2 * radius,
+                                   angle=0,
+                                   theta1=s1,
+                                   theta2=s2,
                                    color=linecolor(pen))
             ax = plt.gca()
             ax.add_patch(pac)
             x = tx
             y = ty
-    plt.xlim(0, 390)    #the maximum x-dimensions 
-    plt.ylim(0, 310)    #the maximum y-dimensions 
+        else:
+            supported_commands = ["G1", "G2", "G3", "G28", "M280", "M400"]
+            print_error("NOT_SUPPORTED",
+                        "supported commands are: " + str(supported_commands))
+
+    plt.xlim(0, 390)  #the maximum x-dimensions
+    plt.ylim(0, 310)  #the maximum y-dimensions
     plt.axes().set_aspect("equal")
     plt.show()
 
 
-def main():
+if __name__ == "__main__":
     print_startup_message()
-    if len(sys.argv) >1:
+    if len(sys.argv) > 1:
         filename = sys.argv[1]
         file_reader(filename)
     else:
-        print("ERROR: Please specify a filename as an argument when running DrawGcode f.e DrawGcode.exe \"filename.gcode\"")
-
-
-if __name__ == "__main__":
-    main()
+        print_error("INVALID_PARAMETER",
+                    "You must specify a filename as the first parameter")
