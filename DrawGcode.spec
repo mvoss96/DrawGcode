@@ -4,7 +4,7 @@ block_cipher = None
 
 
 a = Analysis(['DrawGcode.py'],
-             pathex=['C:\\Users\\mvoss\\Documents\\git-Projects\\DrawGcode'],
+             pathex=['E:\\Repos\\git-Projects\\DrawGcode'],
              binaries=[],
              datas=[],
              hiddenimports=[],
