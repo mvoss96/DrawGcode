@@ -12,7 +12,7 @@ plt.rcParams['toolbar'] = 'None'  # remove stock matplotlib toolbar
 
 # Author and information
 def print_startup_message():
-    print("DrawGcode v0.2b by Marcus Voß\nhttps://git.io/fhTYj\n")
+    print("DrawGcode v0.3b by Marcus Voß\nhttps://git.io/fhTYj\n")
     print("--------------------------------------------")
 
 
@@ -25,6 +25,9 @@ def print_error(type, reason=""):
 def linecolor(pen):
     return "blue" if pen else "grey"
 
+# return the right width based on the pen variable
+def linewidth(pen):
+    return 3 if pen else 0.5
 
 # return the target angle (in degrees) to a point on a circle seen from the center of the circle. dx,dy: relative coordinates of the point from the center. r: Radius of the circle.
 def point_angle(dx, dy, r):
@@ -82,7 +85,7 @@ def file_reader(filename):
                 print("Warning: characters after M400 are ignored")
 
         elif "G28" in line:
-            plt.plot([x, 0], [y, 0], color=linecolor(pen))
+            plt.plot([x, 0], [y, 0], color=linecolor(pen),linewidth=linewidth(pen))
             x = 0
             y = 0
         elif "M280" in line:
@@ -93,7 +96,7 @@ def file_reader(filename):
                 elif s == 0:
                     pen = False
                 else:
-                    print_error("SYTX")
+                    print_error("SYNTAX", "value for M280 P0 out of range")
         elif "G1" in line:
             tx = x
             ty = y
@@ -102,7 +105,7 @@ def file_reader(filename):
             if "Y" in line:
                 ty = readKey(line, "Y")
             if x != None and y != None:
-                plt.plot([x, tx], [y, ty], color=linecolor(pen))
+                plt.plot([x, tx], [y, ty], color=linecolor(pen), linewidth=linewidth(pen))
                 x = tx
                 y = ty
             if "Z" in line:
@@ -132,7 +135,7 @@ def file_reader(filename):
                 (centerX - tx)**2 +
                 (centerY - ty)**2)  #distance beteen end point and center point
             if radius != radius2:  #to reach the end point from the starting point both radii have to be equal
-                print_error("SYTX")
+                print_error("SYNTAX","arc not possible")
                 return -1
             s1 = point_angle(
                 x - centerX, y - centerY,
@@ -147,7 +150,8 @@ def file_reader(filename):
                                    angle=0,
                                    theta1=s2,
                                    theta2=s1,
-                                   color=linecolor(pen))
+                                   color=linecolor(pen),
+                                   linewidth=linewidth(pen))
             else:
                 pac = mpatches.Arc([centerX, centerY],
                                    2 * radius,
@@ -155,7 +159,8 @@ def file_reader(filename):
                                    angle=0,
                                    theta1=s1,
                                    theta2=s2,
-                                   color=linecolor(pen))
+                                   color=linecolor(pen),
+                                   linewidth=linewidth(pen))
             ax = plt.gca()
             ax.add_patch(pac)
             x = tx
@@ -165,8 +170,10 @@ def file_reader(filename):
             print_error("NOT_SUPPORTED",
                         "supported commands are: " + str(supported_commands))
 
-    plt.xlim(0, 390)  #the maximum x-dimensions
-    plt.ylim(0, 310)  #the maximum y-dimensions
+    # plt.xlim(0, 390)  #the maximum x-dimensions
+    # plt.ylim(0, 310)  #the maximum y-dimensions
+    plt.xlim(0, 297)  #the maximum x-dimensions (A4)
+    plt.ylim(0, 210)  #the maximum y-dimensions (A4)
     plt.axes().set_aspect("equal")
     plt.show()
 
@@ -175,7 +182,6 @@ if __name__ == "__main__":
     print_startup_message()
     if len(sys.argv) > 1:
         filename = sys.argv[1]
-        file_reader(filename)
     else:
-        print_error("INVALID_PARAMETER",
-                    "You must specify a filename as the first parameter")
+        filename = input("Please input a filename to open: ")
+    file_reader(filename)
