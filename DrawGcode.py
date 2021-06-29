@@ -170,11 +170,11 @@ def file_reader(filename):
             print_error("NOT_SUPPORTED",
                         "supported commands are: " + str(supported_commands))
 
-    # plt.xlim(0, 390)  #the maximum x-dimensions
-    # plt.ylim(0, 310)  #the maximum y-dimensions
+    plt.xlim(0, 390)  #the maximum x-dimensions
+    plt.ylim(0, 310)  #the maximum y-dimensions
     plt.xlim(0, 297)  #the maximum x-dimensions (A4)
     plt.ylim(0, 210)  #the maximum y-dimensions (A4)
-    plt.axes().set_aspect("equal")
+    plt.gca().set_aspect('equal')
     plt.show()
 
 
