@@ -3,7 +3,7 @@ A simple program that allows the graphical preview of .gcode files by utilising 
 Mainly written for internal use in teaching the workings of G-code.
 
 Since it is written for use with a plotter only 2D G-codes are supported. The pen is controlled via M280 P0 S? commands
-S>40 is interpreted as pen down, S=0 is interpreted as pen up.
+S>35 is interpreted as pen down, S=0 is interpreted as pen up.
 
 Supported commands:
 G28
