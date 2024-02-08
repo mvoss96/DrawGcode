@@ -91,7 +91,7 @@ def file_reader(filename):
         elif "M280" in line:
             if "P0" in line and "S" in line:
                 s = readKey(line, "S")
-                if s >= 40:
+                if s >= 35:
                     pen = True
                 elif s == 0:
                     pen = False
